@@ -6,10 +6,13 @@ typedef struct {
     int xDim;
     int yDim;
     char direction;
+    int currentXPos;
+    int currentYPos;
 } mapInfo;
 
 void printMap(mapInfo);
 mapInfo startSim(mapInfo);
+mapInfo checkSquare(mapInfo info);
 
 int main(int argc, char *argv[]) {
     int maxSteps;
@@ -60,10 +63,11 @@ int main(int argc, char *argv[]) {
             row++;
         }
     }
-    
-    printMap(info);
 
     info = startSim(info);
+    info = checkSquare(info);
+    printMap(info);
+    printf("Current Position: %d, %d\n", info.currentXPos, info.currentYPos);
 
     /* Test prints */
     printf("Max steps: %d\n", maxSteps);
@@ -82,8 +86,9 @@ void printMap(mapInfo info) {
         for(column1=0; column1<info.xDim; column1++ ) {
             printf("%c", info.map[row1][column1]);
         }
-        printf("Direction: %c",'\n');
+    printf("%c", '\n');
     }
+    
 }
 
 mapInfo startSim(mapInfo info) {
@@ -92,6 +97,9 @@ mapInfo startSim(mapInfo info) {
     int sidePos;
     printf("(Side Pos)> ");
     scanf("%c%d",&side,&sidePos);
+
+    /* Take one from sidepos as array starts at 0 */
+    sidePos--;
 
     /* Drop ball in at startPos */
     int startRow;
@@ -124,6 +132,34 @@ mapInfo startSim(mapInfo info) {
 
         default:;
 
+    }
+    info.currentXPos = startRow;
+    info.currentYPos = startCol;
+    printf("Start Position: %d, %d\n",info.currentXPos, info.currentYPos);
+    return info;
+}
+
+mapInfo checkSquare(mapInfo info) {
+    int currentX = info.currentXPos;
+    int currentY = info.currentYPos;
+    char square = info.map[currentX][currentY];
+
+    switch(square) {
+        case '.':
+            info.map[currentX][currentY] = '1';
+            break;
+
+        case '/':
+            break;
+
+        case '\\':
+            break;
+
+        case '=':
+            break;
+
+        case '@':
+            break;
     }
     return info;
 }
