@@ -2,6 +2,11 @@
 #include <stdlib.h>
 
 typedef struct {
+    int xPos;
+    int yPos;
+} point;
+
+typedef struct {
     char** map;
     int xDim;
     int yDim;
@@ -14,6 +19,7 @@ void printMap(mapInfo);
 mapInfo startSim(mapInfo);
 mapInfo checkSquare(mapInfo);
 mapInfo moveBall(mapInfo);
+point searchMap(mapInfo, char);
 
 int main(int argc, char *argv[]) {
     int maxSteps;
@@ -105,7 +111,7 @@ void printMap(mapInfo info) {
         }
     printf("%c", '\n');
     }
-    printf("%c\n", '\n');
+    printf("%c", '\n');
     
 }
 
@@ -160,9 +166,23 @@ mapInfo checkSquare(mapInfo info) {
     int currentX = info.currentXPos;
     int currentY = info.currentYPos;
     char square = info.map[currentX][currentY];
+    point newPoint;
 
     if(square >= '1' && square < '9') {
         info.map[currentX][currentY] = ++square;
+    } else if(square >= 'A' && square <= 'Z') {
+        newPoint = searchMap(info, ++square);
+        printf("New Point: %d, %d\n", newPoint.xPos, newPoint.yPos);
+        if(newPoint.xPos == -1) {  /* Next char isn't found on map */
+            newPoint = searchMap(info, 'A');
+            info.currentXPos = newPoint.xPos;
+            info.currentYPos = newPoint.yPos;
+            return info;
+        } else { /* Next char is found */
+            info.currentXPos = newPoint.xPos;
+            info.currentYPos = newPoint.yPos;
+            return info;
+        }
     } else {
         switch(square) {
             case '.':
@@ -257,4 +277,25 @@ mapInfo moveBall(mapInfo info) {
             break;
     }
     return info;
+}
+
+point searchMap(mapInfo info, char searchChar) {
+    int i;
+    int j;
+    char onSquare;
+    point newPoint;
+
+    for(i=0; i<info.xDim; i++) {
+        for(j=0; j<info.yDim; j++) {
+            onSquare = info.map[i][j];
+            if((onSquare == searchChar)) {
+                newPoint.xPos = i;
+                newPoint.yPos = j;
+                return newPoint; /* Position of searched character */
+            }
+        }
+    }
+    newPoint.xPos = -1;
+    newPoint.yPos = -1;
+    return newPoint;
 }
