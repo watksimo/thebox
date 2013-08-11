@@ -161,64 +161,82 @@ mapInfo checkSquare(mapInfo info) {
     int currentY = info.currentYPos;
     char square = info.map[currentX][currentY];
 
-    switch(square) {
-        case '.':
-            info.map[currentX][currentY] = '1';
-            break;
+    if(square >= '1' && square < '9') {
+        info.map[currentX][currentY] = ++square;
+    } else {
+        switch(square) {
+            case '.':
+                info.map[currentX][currentY] = '1';
+                break;
 
-        case '/':
-            switch(info.direction) {
-                case 'N':
-                    info.direction = 'E';
-                    break;
-                case 'E':
-                    info.direction = 'N';
-                    break;
-                case 'S':
-                    info.direction = 'W';
-                    break;
-                case 'W':
-                    info.direction = 'S';
-                    break;
-            }
-            break;
+            case '/':
+                switch(info.direction) {
+                    case 'N':
+                        info.direction = 'E';
+                        break;
+                    case 'E':
+                        info.direction = 'N';
+                        break;
+                    case 'S':
+                        info.direction = 'W';
+                        break;
+                    case 'W':
+                        info.direction = 'S';
+                        break;
+                }
+                break;
 
-        case '\\':
-            switch(info.direction) {
-                case 'N':
-                    info.direction = 'W';
-                    break;
-                case 'E':
-                    info.direction = 'S';
-                    break;
-                case 'S':
-                    info.direction = 'E';
-                    break;
-                case 'W':
-                    info.direction = 'N';
-                    break;
-            }
-            break;
+            case '\\':
+                switch(info.direction) {
+                    case 'N':
+                        info.direction = 'W';
+                        break;
+                    case 'E':
+                        info.direction = 'S';
+                        break;
+                    case 'S':
+                        info.direction = 'E';
+                        break;
+                    case 'W':
+                        info.direction = 'N';
+                        break;
+                }
+                break;
 
-        case '=':
-            switch(info.direction) {
-                case 'N':
-                    info.direction = 'S';
-                    break;
-                case 'E':
-                    info.direction = 'W';
-                    break;
-                case 'S':
-                    info.direction = 'N';
-                    break;
-                case 'W':
-                    info.direction = 'E';
-                    break;
-            }
-            break;
+            case '=':
+                switch(info.direction) {
+                    case 'N':
+                        info.direction = 'S';
+                        break;
+                    case 'E':
+                        info.direction = 'W';
+                        break;
+                    case 'S':
+                        info.direction = 'N';
+                        break;
+                    case 'W':
+                        info.direction = 'E';
+                        break;
+                }
+                break;
 
-        case '@':
-            break;
+            case '@':
+                switch(info.direction) {
+                    case 'N':
+                        info.currentXPos -= 4;
+                        break;
+                    case 'E':
+                        info.currentYPos += 4;
+                        break;
+                    case 'S':
+                        info.currentXPos += 4;
+                        break;
+                    case 'W':
+                        info.currentYPos -= 4;
+                        break;
+                }
+                break;
+        }
     }
     return info;
 }
