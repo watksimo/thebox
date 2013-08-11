@@ -12,11 +12,13 @@ typedef struct {
 
 void printMap(mapInfo);
 mapInfo startSim(mapInfo);
-mapInfo checkSquare(mapInfo info);
+mapInfo checkSquare(mapInfo);
+mapInfo moveBall(mapInfo);
 
 int main(int argc, char *argv[]) {
     int maxSteps;
     mapInfo info;
+    mapInfo startMapInfo;
     
     /* Check for correct number of inputs */
     if(argc == 2) {
@@ -64,10 +66,25 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    info = startSim(info);
-    info = checkSquare(info);
-    printMap(info);
-    printf("Current Position: %d, %d\n", info.currentXPos, info.currentYPos);
+    /* Save starting map file to reuse */
+    startMapInfo = info;
+    /* Main game loop */
+    int playing = 1;
+    while(1) {
+        info = startMapInfo;
+        printMap(info);
+        info = startSim(info);
+        printMap(info);
+        while(playing) {
+            info = checkSquare(info);
+            info = moveBall(info);
+            if(info.currentXPos < 0 || info.currentXPos > info.xDim-1 
+                || info.currentYPos < 0 || info.currentYPos > info.yDim-1) {
+                break;
+            }
+            printMap(info);
+        }
+    }
 
     /* Test prints */
     printf("Max steps: %d\n", maxSteps);
@@ -88,6 +105,7 @@ void printMap(mapInfo info) {
         }
     printf("%c", '\n');
     }
+    printf("%c\n", '\n');
     
 }
 
@@ -135,7 +153,6 @@ mapInfo startSim(mapInfo info) {
     }
     info.currentXPos = startRow;
     info.currentYPos = startCol;
-    printf("Start Position: %d, %d\n",info.currentXPos, info.currentYPos);
     return info;
 }
 
@@ -150,15 +167,75 @@ mapInfo checkSquare(mapInfo info) {
             break;
 
         case '/':
+            switch(info.direction) {
+                case 'N':
+                    info.direction = 'E';
+                    break;
+                case 'E':
+                    info.direction = 'N';
+                    break;
+                case 'S':
+                    info.direction = 'W';
+                    break;
+                case 'W':
+                    info.direction = 'S';
+                    break;
+            }
             break;
 
         case '\\':
+            switch(info.direction) {
+                case 'N':
+                    info.direction = 'W';
+                    break;
+                case 'E':
+                    info.direction = 'S';
+                    break;
+                case 'S':
+                    info.direction = 'E';
+                    break;
+                case 'W':
+                    info.direction = 'N';
+                    break;
+            }
             break;
 
         case '=':
+            switch(info.direction) {
+                case 'N':
+                    info.direction = 'S';
+                    break;
+                case 'E':
+                    info.direction = 'W';
+                    break;
+                case 'S':
+                    info.direction = 'N';
+                    break;
+                case 'W':
+                    info.direction = 'E';
+                    break;
+            }
             break;
 
         case '@':
+            break;
+    }
+    return info;
+}
+
+mapInfo moveBall(mapInfo info) {
+    switch(info.direction) {
+        case 'N':
+            info.currentXPos--;
+            break;
+        case 'E':
+            info.currentYPos++;
+            break;
+        case 'S':
+            info.currentXPos++;
+            break;
+        case 'W':
+            info.currentYPos--;
             break;
     }
     return info;
