@@ -24,8 +24,7 @@ point searchMap(mapInfo, char);
 int main(int argc, char *argv[]) {
     int maxSteps;
     mapInfo info;
-    mapInfo startMapInfo;
-    
+
     /* Check for correct number of inputs */
     if(argc == 2) {
         maxSteps = 10;
@@ -36,66 +35,95 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    /* Open file and store map dimensions */
-    FILE *file;
-    file = fopen(argv[1], "r");
-    
-    if(file == 0) {
-        fprintf(stderr, "Missing map file\n");
-        return 3;
-    } else {
-        fscanf(file, "%d %d", &info.xDim, &info.yDim);
-    }
-    
-    /* Create 2d array of chars */
-    int i;
-    info.map = (char**) malloc(info.xDim*sizeof(char*));
-    for(i=0; i<info.xDim; i++) {
-        info.map[i] = (char*) malloc(info.yDim*sizeof(char));
-    }
-   
-    /* Store chars to array */
-    int row = -1;
-    int column = 0;
-    char ch;    
-    while((ch=fgetc(file)) != EOF) {
-        if(row != -1) {
-            if(ch == '\n') {
-                row++;
-                column = 0;
-            } else {
-                info.map[row][column] = ch;
-                column++;
-            }
-        } else {
-            row++;
-        }
-    }
-
-    /* Save starting map file to reuse */
-    startMapInfo = info;
     /* Main game loop */
     int playing = 1;
+    int first = 1;
     while(1) {
-        info = startMapInfo;
+
+        /* Open file and store map dimensions */
+        FILE *file;
+        file = fopen(argv[1], "r");
+        
+        if(file == 0) {
+            fprintf(stderr, "Missing map file.\n");
+            return 3;
+        } else {
+            fscanf(file, "%d %d", &info.xDim, &info.yDim);
+        }
+        
+        if(first) {
+            /* Create 2d array of chars */
+            int i;
+            info.map = (char**) malloc(info.xDim*sizeof(char*));
+            for(i=0; i<info.xDim; i++) {
+                info.map[i] = (char*) malloc(info.yDim*sizeof(char));
+            }
+            first = 0;
+        }
+       
+        /* Store chars to array */
+        int row = -1;
+        int column = 0;
+        char ch;
+		int rowCount = 0;
+		char nextLetter = '*';
+        while((ch=fgetc(file)) != EOF) {
+			if((ch>='A' && ch<='Z')) {
+				if(nextLetter=='*') {
+					nextLetter = ++ch;
+				} else {
+					if(ch!=nextLetter) {
+						fprintf(stderr, "Missing letters.\n");
+						return 7;
+					}
+				}
+			}
+            if(row != -1) {
+                if(ch == '\n') {
+                    row++;
+                    column = 0;
+					rowCount++;
+					if(rowCount>info.xDim) {
+						fprintf(stderr, "Map file is the wrong size.\n");
+						return 4;
+					}
+                } else {
+					if(!(ch=='.' || ch=='/' || ch=='\\' || ch=='@' || ch=='=' || (ch>='A' && ch<='Z'))) {
+						fprintf(stderr, "Bad map char.\n");
+						return 5;
+					}
+                    info.map[row][column] = ch;
+                    column++;
+					if(column > info.yDim) {
+						fprintf(stderr, "Map file is the wrong size.\n");
+						return 4;
+					}
+                }
+            } else {
+                row++;
+            }
+        }
+
         printMap(info);
         info = startSim(info);
         printMap(info);
+        int currentSteps = 0;
         while(playing) {
-            info = checkSquare(info);
-            info = moveBall(info);
-            if(info.currentXPos < 0 || info.currentXPos > info.xDim-1 
-                || info.currentYPos < 0 || info.currentYPos > info.yDim-1) {
+            if(currentSteps>maxSteps) {
                 break;
             }
+            info = checkSquare(info);
+            info = moveBall(info);
+            currentSteps++;
             printMap(info);
+            printf("info.xDim: %d\n", info.currentXPos); /* DEBUGGING!!!!!!!!!!! */
+            if(info.currentXPos < 0 || info.currentXPos >= info.xDim 
+                || info.currentYPos < 0 || info.currentYPos > info.yDim) {
+                break;
+            }
+            printf("CurrentXPos: %d\n", info.currentXPos); /* DEBUGGING!!!!!!!!!!! */
         }
     }
-
-    /* Test prints */
-    printf("Max steps: %d\n", maxSteps);
-    printf("Dimensions: %d,%d\n", info.xDim, info.yDim);
-    printf("%c\n", info.direction);
 
     return 0;
 
@@ -119,8 +147,9 @@ mapInfo startSim(mapInfo info) {
     /* Take input where to start */
     char side;
     int sidePos;
+    char leftOver;
     printf("(Side Pos)> ");
-    scanf("%c%d",&side,&sidePos);
+    scanf("%c%d%c",&side,&sidePos, &leftOver);
 
     /* Take one from sidepos as array starts at 0 */
     sidePos--;
@@ -128,7 +157,7 @@ mapInfo startSim(mapInfo info) {
     /* Drop ball in at startPos */
     int startRow;
     int startCol;
-
+	
     switch(side) {
         case 'N':
             startRow = 0;
@@ -137,9 +166,11 @@ mapInfo startSim(mapInfo info) {
             break;
 
         case 'E':
+			printf("StartSim xDim: %d\n", info.xDim);
             startCol = info.xDim-1;
             startRow = sidePos;
             info.direction = 'W';
+			printf("Intended Current Pos(startSim): %d, %d\n", startRow, startCol);
             break;
 
         case 'S':
@@ -159,6 +190,7 @@ mapInfo startSim(mapInfo info) {
     }
     info.currentXPos = startRow;
     info.currentYPos = startCol;
+	printf("Current Pos(startSim): %d, %d\n", info.currentXPos, info.currentYPos);
     return info;
 }
 
@@ -167,6 +199,7 @@ mapInfo checkSquare(mapInfo info) {
     int currentY = info.currentYPos;
     char square = info.map[currentX][currentY];
     point newPoint;
+	
 
     if(square >= '1' && square < '9') {
         info.map[currentX][currentY] = ++square;
