@@ -33,6 +33,7 @@ char reflector_nwse(char);
 char reflector(char);
 Point launchpad(Point, char);
 int check_input(char, int, MapInfo);
+void dump_line(FILE*);
 
 int main(int argc, char *argv[]) {
     int maxSteps;
@@ -97,22 +98,22 @@ void print_map(MapInfo info) {
 
 MapInfo start_sim(MapInfo info) {
     /* Take input where to start */
-    char side, buffer[7];
-    int sidePos, startRow, startCol;
+    char side, buffer[7], newLine;
+    int sidePos, startRow, startCol, scanResult;
     printf("(side pos)>");
     fgets(buffer, 7, stdin);
-    sscanf(buffer, "%c%d", &side, &sidePos);
+    scanResult = sscanf(buffer, "%c%d%c", &side, &sidePos, &newLine);
 
     if(feof(stdin)) {
         exit(0);
-    }
-
-    if(side == '\n') {
+    } else if(side == '\n') {
         info = start_sim(info);
         return info;
-    }
-
-    if(!check_input(side, sidePos, info)) {
+    } else if(newLine != '\n') {
+        dump_line(stdin);
+        info = start_sim(info);
+        return info;
+    } else if(!check_input(side, sidePos, info)) {
         info = start_sim(info);
         return info;
     }
@@ -464,4 +465,10 @@ int check_input(char side, int sidePos, MapInfo info) {
     }
 
     return 1;
+}
+
+void dump_line(FILE *fp) {
+    int ch;
+
+    while((ch = fgetc(fp)) != EOF && ch != '\n');
 }
