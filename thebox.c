@@ -1,15 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* Stores co-ordinates */
 typedef struct {
     int xPos;
     int yPos;
 } Point;
 
+/* Stores an array of 26 spaces for all letters */
 typedef struct {
     int alph[26];
 } Alphabet;
 
+/* Stores all variables related to the map */
 typedef struct {
     char** map;
     int xDim;
@@ -24,7 +27,7 @@ MapInfo start_sim(MapInfo);
 MapInfo check_square(MapInfo);
 MapInfo move_ball(MapInfo);
 Point search_map(MapInfo, char);
-int check_letters(Alphabet);
+void check_letters(Alphabet);
 MapInfo read_file(MapInfo, char *);
 char** create_array(MapInfo);
 char** populate_array(MapInfo, char *);
@@ -34,22 +37,27 @@ char reflector(char);
 Point launchpad(Point, char);
 int check_input(char, int, MapInfo);
 void dump_line(FILE*);
+MapInfo fire_ball(MapInfo, char, char);
+Alphabet add_letters(Alphabet, char);
+void check_valid_chars(char);
+void check_map_size(MapInfo, int);
+
 
 int main(int argc, char *argv[]) {
-    int maxSteps;
-    MapInfo info;
-    int currentSteps = 0;
+    int maxSteps; /* Stores the maximum allowed steps */
+    MapInfo info; /* Current state of the map */
+    int currentSteps = 0; /* Keeps track of steps taken */
 
-    /* Check for correct number of inputs */
-    if(argc == 2) {
-        maxSteps = 10;
+    /* Check for correct number of user inputs and store variables*/
+    if(argc == 2) { 
+        maxSteps = 10; /* Store default max steps when not given */
     } else if(argc == 3) {
-        maxSteps = atoi(argv[2]);
-        if(maxSteps>=1000 || maxSteps<=0) {
+        maxSteps = atoi(argv[2]); /* Store given maximum number of steps */
+        if(maxSteps>=1000 || maxSteps<=0) { /* Check for valid max steps */
             fprintf(stderr, "Bad max steps.\n");
             return 2;
         }
-    } else {
+    } else { /* Incorrent number of arguments given */
         fprintf(stderr, "Usage: thebox mapfile [maxsteps]\n");
         return 1;
     }
@@ -61,13 +69,13 @@ int main(int argc, char *argv[]) {
         info = start_sim(info);
         currentSteps = 0;
         while(1) {
-            if(currentSteps>=maxSteps) {
+            if(currentSteps>=maxSteps) { /* End when max steps exceeded */
                 printf("End of simulation.\n");
                 break;
             }
             if(info.currentPos.xPos < 0 || info.currentPos.xPos >= info.xDim 
                 || info.currentPos.yPos < 0 || 
-                info.currentPos.yPos >= info.yDim) {
+                info.currentPos.yPos >= info.yDim) {/*End when ball exits map*/
                 printf("End of simulation.\n");
                 break;
             }
@@ -82,8 +90,8 @@ int main(int argc, char *argv[]) {
 
 }
 
-void print_map(MapInfo info) {
-    /* Print the map to screen */ 
+/* Print the map to the screen */
+void print_map(MapInfo info) { 
     int row1;
     int column1;
     for(row1 = 0; row1<info.xDim; row1++) {
@@ -96,24 +104,28 @@ void print_map(MapInfo info) {
     
 }
 
+/* Get user input and fire the ball */
 MapInfo start_sim(MapInfo info) {
-    /* Take input where to start */
     char side, buffer[7], newLine;
-    int sidePos, startRow, startCol, scanResult;
+    int sidePos, scanResult;
     printf("(side pos)>");
     fgets(buffer, 7, stdin);
     scanResult = sscanf(buffer, "%c%d%c", &side, &sidePos, &newLine);
 
-    if(feof(stdin)) {
+    if(feof(stdin)) { /* Exit when ctrl+d pressed */
         exit(0);
-    } else if(side == '\n') {
+    } else if(side == '\n') { /* Reprompt when line empty */
         info = start_sim(info);
         return info;
-    } else if(newLine != '\n') {
+    } else if(newLine != '\n') { /* Reprompt if excess characters */
         dump_line(stdin);
         info = start_sim(info);
         return info;
-    } else if(!check_input(side, sidePos, info)) {
+    } else if(!check_input(side, sidePos, info)) { /* Reprompt if bad inputs */
+        info = start_sim(info);
+        return info;
+    } else if(scanResult == 1) { /* Reprompt if lacking characters */
+        dump_line(stdin);
         info = start_sim(info);
         return info;
     }
@@ -121,7 +133,14 @@ MapInfo start_sim(MapInfo info) {
     /* Take one from sidepos as array starts at 0 */
     sidePos--;
 
-    /* Drop ball in at startPos */
+    info = fire_ball(info, side, sidePos);
+    
+    return info;
+}
+
+/* Fire ball in at starting position */
+MapInfo fire_ball(MapInfo info, char side, char sidePos) {
+    int startCol, startRow;
     switch(side) {
         case 'N':
             startRow = 0;
@@ -156,28 +175,29 @@ MapInfo start_sim(MapInfo info) {
     return info;
 }
 
+/* Check the character on the current square and modify attributes */
 MapInfo check_square(MapInfo info) {
     int currentX = info.currentPos.xPos;
     int currentY = info.currentPos.yPos;
     char square = info.map[currentX][currentY];
     Point newPoint;
 
-    if(square >= '1' && square < '9') {
+    if(square >= '1' && square < '9') { /* Check if number on square */
         info.map[currentX][currentY] = ++square;
-    } else if(square >= 'A' && square <= 'Z') {
+    } else if(square >= 'A' && square <= 'Z') { /* Check if letter on square */
         newPoint = search_map(info, ++square);
         if(newPoint.xPos == -1) {  /* Next char isn't found on map */
-            newPoint = search_map(info, 'A');
+            newPoint = search_map(info, 'A'); /* Move ball to 'A' */
             info.currentPos.xPos = newPoint.xPos;
             info.currentPos.yPos = newPoint.yPos;
             return info;
-        } else { /* Next char is found */
+        } else { /* Next char is found - move ball there */
             info.currentPos.xPos = newPoint.xPos;
             info.currentPos.yPos = newPoint.yPos;
             return info;
         }
     } else {
-        switch(square) {
+        switch(square) { /* Make appropriate changes based on the square */
             case '.':
                 info.map[currentX][currentY] = '1';
                 break;
@@ -202,6 +222,7 @@ MapInfo check_square(MapInfo info) {
     return info;
 }
 
+/* Move ball to new position */
 MapInfo move_ball(MapInfo info) {
     switch(info.direction) {
         case 'N':
@@ -220,15 +241,17 @@ MapInfo move_ball(MapInfo info) {
     return info;
 }
 
+/* Find and return co-ordinates of given character - [-1,-1] if not found */
 Point search_map(MapInfo info, char searchChar) {
     int i;
     int j;
     char onSquare;
     Point newPoint;
 
+    /* Iterate through map */
     for(i = 0; i<info.xDim; i++) {
         for(j = 0; j<info.yDim; j++) {
-            onSquare = info.map[i][j];
+            onSquare = info.map[i][j]; /* Save character on the square */
             if((onSquare == searchChar)) {
                 newPoint.xPos = i;
                 newPoint.yPos = j;
@@ -236,24 +259,28 @@ Point search_map(MapInfo info, char searchChar) {
             }
         }
     }
+
+    /* Searched character not found */
     newPoint.xPos = -1;
     newPoint.yPos = -1;
     return newPoint;
 }
 
+/* Open the given file, and store all map details */
 MapInfo read_file(MapInfo info, char *filename) {
-    /* Open file and store map dimensions */
     FILE *file;
     int testVar;
     char middleChar;
 
     file = fopen(filename, "r");
     
-    if(file == 0) {
+    if(file == 0) { /* Exit if file open fails */
         fprintf(stderr, "Missing map file.\n");
         exit(3);
-    } else {
+    } else { /* Store map dimensions */
         testVar = fscanf(file, "%d%c%d", &info.xDim, &middleChar, &info.yDim);
+        
+	/* Exit if invalid dimensions given */
         if(testVar != 3 || middleChar != ' ') {
             fprintf(stderr, "Bad map dimensions.\n");
             exit(4);
@@ -265,14 +292,12 @@ MapInfo read_file(MapInfo info, char *filename) {
     }
 
     info.map = create_array(info);
-    
     info.map = populate_array(info, filename);
-   
-    
 
     return info;
 }
 
+/* Create array of given size */
 char** create_array(MapInfo info) {
     int first = 1;
     if(first) {
@@ -288,29 +313,29 @@ char** create_array(MapInfo info) {
     return info.map;
 }
 
+/* Add characters in file to the array */
 char** populate_array(MapInfo info, char *filename) {
     /* Store chars to array */
     FILE *file;
     int row = -1, column = 0, rowCount = 0, j, firstLinePassed = 0;
     char ch;
     Alphabet alph;
-    for(j = 0; j<26; j++) {
+
+    for(j = 0; j<26; j++) { /* Populate alph with all 0's */
         alph.alph[j] = 0;
     }
+
     file = fopen(filename, "r");
+
+    /* Add all characters in the file to the array */
     while((ch = fgetc(file)) != EOF) {
-        if(!firstLinePassed && ch!='\n') {
+        if(!firstLinePassed && ch!='\n') { /* Skip first line (only has \n) */
             continue;
         } else {
             firstLinePassed = 1;
         }
         if((ch>='A' && ch<='Z')) { /* Check if a letter */
-            if (alph.alph[ch-65]) {
-                fprintf(stderr, "Missing letters.\n");
-                exit(7);
-            } else {
-                alph.alph[ch-65] = 1;
-            }
+            alph = add_letters(alph, ch);
         }
         if(row != -1) {
             if(ch == '\n') {
@@ -322,11 +347,7 @@ char** populate_array(MapInfo info, char *filename) {
                 }
                 column = 0;
             } else {
-                if(!(ch=='.' || ch=='/' || ch=='\\' || ch=='@' || ch=='=' || 
-                    (ch>='A' && ch<='Z'))) {
-                    fprintf(stderr, "Bad map char.\n");
-                    exit(5);
-                }
+                check_valid_chars(ch);
                 info.map[row][column] = ch;
                 column++;
                 if(column > info.yDim) {
@@ -338,21 +359,15 @@ char** populate_array(MapInfo info, char *filename) {
             row++;
         }
     }
-    if(!check_letters(alph)) {
-        fprintf(stderr, "Missing letters.\n");
-        exit(7);
-    }
+    check_letters(alph);
     /* Check map ended the right size */
-    if(row!=info.xDim) {
-        fprintf(stderr, "Map file is the wrong size.\n");
-        exit(6);
-    }
+    check_map_size(info, row);
     return info.map;
 }
 
 /* Returns 1 if all letters valid, 0 otherwise */
-int check_letters(Alphabet alph) { 
-    int noEarlyLetter = 0;
+void check_letters(Alphabet alph) { 
+    int noEarlyLetter = 0; /* Is 0 when an empty space is found in alph */
     int i;
     int letterCount = 0;
 
@@ -360,20 +375,26 @@ int check_letters(Alphabet alph) {
         if(alph.alph[i]) {
             letterCount++;
         }
+	/* 1st empty space in alph found */
         if(!alph.alph[i] && !noEarlyLetter) {
             noEarlyLetter = 1;
         }
+	/* Letter found in alph after empty space - exit program */
         if(alph.alph[i] && noEarlyLetter) {
-            return 0;
+            fprintf(stderr, "Missing letters.\n");
+            exit(7);
         }
     }
+/* Returns bad if only one letter has been found */
     if(!letterCount || letterCount>1) {
-        return 1;
+        return;
     } else {
-        return 0;
+        fprintf(stderr, "Missing letters.\n");
+        exit(7);
     }
 }
 
+/* Changes balls direction in response to '/' */
 char reflector_nesw(char direction) {
     char newDirection;
     switch(direction) {
@@ -393,6 +414,7 @@ char reflector_nesw(char direction) {
     return newDirection;
 }
 
+/* Changes balls direction in response to '\' */
 char reflector_nwse(char direction) {
     char newDirection;
     switch(direction) {
@@ -412,6 +434,7 @@ char reflector_nwse(char direction) {
     return newDirection;
 }
 
+/* Changes balls direction in response to '=' */
 char reflector(char direction) {
     char newDirection;
     switch(direction) {
@@ -431,6 +454,7 @@ char reflector(char direction) {
     return newDirection;
 }
 
+/* Changes balls position in response to '@' */
 Point launchpad(Point currentPos, char direction) {
     Point newPos = currentPos;
     switch(direction) {
@@ -467,8 +491,38 @@ int check_input(char side, int sidePos, MapInfo info) {
     return 1;
 }
 
+/* Eat in all characters on the line in FILE given */
 void dump_line(FILE *fp) {
     int ch;
 
     while((ch = fgetc(fp)) != EOF && ch != '\n');
+}
+
+/* Add letter to encountered letters in Alphabet */
+Alphabet add_letters(Alphabet alph, char ch) {
+    if (alph.alph[ch-65]) { /* Exit if letter already entered */
+        fprintf(stderr, "Missing letters.\n");
+        exit(7);
+    } else {
+        alph.alph[ch-65] = 1; /* Add letter to alph */
+    }
+
+    return alph;
+}
+
+/* Check if a valid character */
+void check_valid_chars(char ch) {
+    if(!(ch=='.' || ch=='/' || ch=='\\' || ch=='@' || ch=='=' || 
+        (ch>='A' && ch<='Z'))) {
+        fprintf(stderr, "Bad map char.\n");
+        exit(5);
+    }
+}
+
+/* Checks that the map is the right size */
+void check_map_size(MapInfo info, int row) {
+    if(row!=info.xDim) {
+        fprintf(stderr, "Map file is the wrong size.\n");
+        exit(6);
+    }
 }
